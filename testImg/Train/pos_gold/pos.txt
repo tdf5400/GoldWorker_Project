@@ -1,0 +1,7 @@
+I:\Users\tdf5400\Desktop\GoldWorker_Project\testImg\Train\pos_gold\0.jpg 1 0 0 50 50
+I:\Users\tdf5400\Desktop\GoldWorker_Project\testImg\Train\pos_gold\1.jpg 1 0 0 50 50
+I:\Users\tdf5400\Desktop\GoldWorker_Project\testImg\Train\pos_gold\2.jpg 1 0 0 50 50
+I:\Users\tdf5400\Desktop\GoldWorker_Project\testImg\Train\pos_gold\3.jpg 1 0 0 50 50
+I:\Users\tdf5400\Desktop\GoldWorker_Project\testImg\Train\pos_gold\4.jpg 1 0 0 50 50
+I:\Users\tdf5400\Desktop\GoldWorker_Project\testImg\Train\pos_gold\5.jpg 1 0 0 50 50
+I:\Users\tdf5400\Desktop\GoldWorker_Project\testImg\Train\pos_gold\6.jpg 1 0 0 50 50

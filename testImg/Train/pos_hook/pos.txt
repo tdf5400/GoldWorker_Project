@@ -1,0 +1,7 @@
+I:\Users\tdf5400\Desktop\GoldWorker_Project\testImg\Train\pos_hook\0.jpg 1 0 0 50 50
+I:\Users\tdf5400\Desktop\GoldWorker_Project\testImg\Train\pos_hook\1.jpg 1 0 0 50 50
+I:\Users\tdf5400\Desktop\GoldWorker_Project\testImg\Train\pos_hook\2.jpg 1 0 0 50 50
+I:\Users\tdf5400\Desktop\GoldWorker_Project\testImg\Train\pos_hook\3.jpg 1 0 0 50 50
+I:\Users\tdf5400\Desktop\GoldWorker_Project\testImg\Train\pos_hook\4.jpg 1 0 0 50 50
+I:\Users\tdf5400\Desktop\GoldWorker_Project\testImg\Train\pos_hook\5.jpg 1 0 0 50 50
+I:\Users\tdf5400\Desktop\GoldWorker_Project\testImg\Train\pos_hook\6.jpg 1 0 0 50 50
