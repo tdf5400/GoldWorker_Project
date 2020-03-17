@@ -11,6 +11,11 @@ import cv2 as cv
 import numpy as np
 
 
+class Locate:  # 坐标表
+    ORGIN = (321, 63)  # 原点（出钩点）
+    HOOKAREA = ((290, 40), (350, 100))  # 钩子区域(x1, y1), (x2, y2)
+    
+
 def get_window(windowName):
     """
     寻找窗口
@@ -48,21 +53,6 @@ def get_img(hwnd):
 
     return img
 
-
-# if __name__ == "__main__":
-#     hwnd = get_window("game.swf")
-#     # 更改窗口大小
-#     win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 640, 480, win32con.SHOW_ICONWINDOW)
-#
-#     while True:
-#         img = get_img(hwnd)
-#
-#         cv.imshow("demo", img)
-#
-#         key = cv.waitKey(10)
-#         if key == 27:  # Esc退出
-#             cv.destroyAllWindows()
-#             break
 
 
 class Items:
@@ -126,7 +116,82 @@ def getItem_Cascade(img):
     return img
 
 
-testimg = cv.imread('../testImg/0.jpg')
-getItem_Cascade(testimg)
-cv.waitKey(0)
-cv.destroyAllWindows()
+# 获取钩子信息
+def getHook(raw):
+    hookPoint = Locate.ORGIN  # 出钩点
+    HOOKAREA = Locate.HOOKAREA  # 钩子区域(x1, y1), (x2, y2)
+    raw = cv.resize(raw, (640, 480))    # 分辨率为640x480
+    img = raw[HOOKAREA[0][1]:HOOKAREA[1][1], HOOKAREA[0][0]:HOOKAREA[1][0], :]  # 截取部分
+    imgHSV = cv.cvtColor(img, cv.COLOR_BGR2HSV)     # HSV色彩
+    thre = cv.inRange(imgHSV, (0, 0, 113), (128, 93, 161))
+
+    # 形态学运算
+    morph = thre
+    kernel = np.ones((3, 3), dtype=np.uint8)
+    morph = cv.dilate(morph, kernel)
+    # kernel = np.ones((3, 3), dtype=np.uint8)
+    # morph = cv.morphologyEx(morph, cv.MORPH_CLOSE, kernel)
+    # kernel = np.ones((2, 2), dtype=np.uint8)
+    # morph = cv.morphologyEx(morph, cv.MORPH_OPEN, kernel)
+    # kernel = np.ones((17, 17), dtype=np.uint8)
+    # morph = cv.morphologyEx(morph, cv.MORPH_CLOSE, kernel)
+
+    # 边缘检测
+    contours, hier = cv.findContours(morph, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    maxArea = None  # 取最大面积的区域
+    for c in contours:
+        # 匹配最小垂直矩形
+        if maxArea is None: # 初值
+            maxArea = c
+            continue
+        w0, h0 = cv.boundingRect(maxArea)[2:4]
+        x, y, w, h = cv.boundingRect(c)
+        if w0*h0 < w*h:
+            maxArea = c
+    if maxArea is None:     # 无轮廓
+        return None
+    # x, y, w, h = cv.boundingRect(maxArea)               # 转换竖直矩形参数
+    # cv.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0))  # 画钩子竖直矩形
+    rect = cv.minAreaRect(maxArea)      # 拟合最小矩形
+    if rect[1][0] > rect[1][1]:     # 角度计算
+        angel = rect[2] - 90
+    else:
+        angel = rect[2]
+    angel = angel + 180     # 角度反转
+    box = np.int0(cv.boxPoints(rect))   # 计算最小矩形离散点
+    cv.drawContours(img, [box], 0, (0, 255, 0), 1)  # 画最小矩形
+
+    cv.line(img, (hookPoint[0]-HOOKAREA[0][0], hookPoint[1]-HOOKAREA[0][1]), (int(rect[0][0]), int(rect[0][1])),
+            (0,0,255), thickness=2)
+    # 拼接回原图像
+    raw[HOOKAREA[0][1]:HOOKAREA[1][1], HOOKAREA[0][0]:HOOKAREA[1][0], :] = img
+    cv.imshow('img', raw)
+    # cv.imshow('hookArea', img)
+    # cv.imshow('thre', thre)
+    # cv.imshow('morph', morph)
+    return angel
+
+# testimg = cv.imread('../testImg/1.jpg')
+# getHook(testimg)
+# # getItem_Cascade(testimg)
+# cv.waitKey(0)
+# cv.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    if 1:
+        hwnd = get_window("game.swf")
+        # 更改窗口大小
+        win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 640, 480, win32con.SHOW_ICONWINDOW)
+
+        while True:
+            img = get_img(hwnd)
+
+            cv.imshow("demo", img)
+            angel = getHook(img)
+            print(angel)
+
+            key = cv.waitKey(100)
+            if key == 27:  # Esc退出
+                cv.destroyAllWindows()
+                break
