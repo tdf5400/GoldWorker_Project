@@ -10,7 +10,7 @@ def __refresh(x):
     global __img, __camera
 
     copyImg = __img
-    __imgHSV = cv2.cvtColor(__img, cv2.COLOR_BGR2HSV)
+    __imgHSV = __img#v2.cvtColor(__img, cv2.COLOR_BGR2HSV)
 
     __h = cv2.getTrackbarPos('loDirr_H', 'Trackbar')
     __s = cv2.getTrackbarPos('loDirr_S', 'Trackbar')
@@ -37,14 +37,14 @@ def __refresh(x):
 
 def __main():
     global __img, __camera
-    print("启动颜色阈值调试程序！\n")
+    print("启动颜色阈值调试程序！")
     print("使用内置图片！")
-    src = cv2.imread('../testImg/0.jpg')
+    src = cv2.imread('../dataset/85.jpg')
 
     if src is None:  # 判断图像存在性
         print("图像不存在！")
     else:
-        __img = cv2.resize(src, (640, 480))  # 分辨率重定义
+        __img = cv2.resize(src, (800, 600))  # 分辨率重定义
         __refresh(None)
 
 

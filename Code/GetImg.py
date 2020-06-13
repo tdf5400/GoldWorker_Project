@@ -51,7 +51,7 @@ def get_img(hwnd):
     ptr.setsize(img.byteCount())
     img = np.array(ptr).reshape(img.height(), img.width(), 4)
 
-    return img
+    return img[:,:,0:3]
 
 
 
@@ -186,7 +186,7 @@ if __name__ == "__main__":
 
         while True:
             img = get_img(hwnd)
-
+            print(img.shape)
             cv.imshow("demo", img)
             angel = getHook(img)
             print(angel)

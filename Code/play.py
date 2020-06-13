@@ -1,7 +1,8 @@
 import cv2 as cv
 import numpy as np
 from math import *
-import GetImg as Get
+from . import GetImg
+from . import object_detection
 
 def drawAxis(img, p_, q_, colour, scale):
     p = list(p_)
@@ -68,7 +69,7 @@ img = cv.imread('..\\testImg\\0.jpg')
 img = cv.resize(img, (640, 480))
 cv.imshow("raw", img)
 
-Get.getItem(img)
+GetImg.getItems(img)
 
 
 # # 标注
