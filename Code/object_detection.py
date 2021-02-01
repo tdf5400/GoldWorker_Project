@@ -1,3 +1,7 @@
+"""
+该文件存放对象识别的相关函数及参数
+"""
+
 import cv2 as cv
 import numpy as np
 
@@ -12,7 +16,7 @@ scoreBoard_height = 120
 goldColorThre = ((0, 215, 248), (56, 255, 255))  # 阈值分割参数
 goldAreaLimit = 200     # 最小像素面积
 goldAreaS2M = 400       # 小金块与中金块区分阈值
-goldAreaM2L = 700       # 中金块与大金块区分阈值
+goldAreaM2L = 900       # 中金块与大金块区分阈值
 
 stoneColorThre = (120, 121, 120), (149, 153, 145)
 stoneAreaLimit = 200
@@ -35,6 +39,30 @@ boneColorThre = (199, 206, 234), (255, 255, 255)
 boneAreaLimit = 1000
 
 diamondPigDistanceLim = 1000
+
+# 数字模板类别
+CLASS_MONEY  = 0
+CLASS_TARGET = 1
+CLASS_TIME   = 2
+CLASS_LEVEL  = 3
+# 数字模板目录
+templateDir = ('../numTemplate/money/',
+               '../numTemplate/target/',
+               '../numTemplate/timeAndLevel/',
+               '../numTemplate/timeAndLevel/')
+# 数字模板ROI
+templateROI = ((80, 2, 150, 45),      # x, y, w, h
+               (130, 45, 150, 45),
+               (720, 7, 75, 45),
+               (690, 45, 70, 45))
+# 数字模板阈值
+templateThre = (0.9, 0.9, 0.9, 0.9)
+
+
+class Locate:  # 坐标表
+    ORGIN = (400, 78)                   # 钩子原点（出钩点）
+    HOOKAREA = ((360, 60), (440, 120))  # 钩子区域(x1, y1), (x2, y2)
+
 
 def getGold(img):
     """
@@ -104,7 +132,7 @@ def getStone(img):
     morph = cv.morphologyEx(thre, cv.MORPH_CLOSE, kernel=kernel)
     kernel = np.ones((3, 3), dtype=np.uint8)
     morph = cv.morphologyEx(morph, cv.MORPH_OPEN, kernel=kernel)
-    cv.imshow('morph', morph)
+    # cv.imshow('morph', morph)
 
     # 检测
     small = []
@@ -328,89 +356,6 @@ def getBone(img):
 
     return bone_S, bone_L
 
-tmp = '73.jpg'
-moneyColorThre = (0, 19, 0), (44, 157, 46)
-moneyAreaLimit = (500, 2000)
-moneyFontWidth = 13
-moneyFontArea = (0, 0, 0, 232,
-                    0, 0, 0,
-                    0, 0, 0)      # 字体像素值 0-9
-# moneyFontThre = 5   # 面积差为moneyFontThre以内则判断为该值
-def getMoney(img):
-    """
-    显示金钱
-    :param img:
-    :return: 金钱数
-    """
-    assert (img.shape == (600, 800, 3)), "[error] resolution should be 800x600!"
-
-    thre = cv.inRange(img, moneyColorThre[0], moneyColorThre[1])
-    thre[:][scoreBoard_height:] = 0  # ROI
-
-    kernel = np.ones((8, 8), dtype=np.uint8)
-    morph = cv.morphologyEx(thre, cv.MORPH_CLOSE, kernel=kernel)
-    # cv.imshow('morph', morph)
-
-    # 检测
-    money = 0
-    contours, hier = cv.findContours(morph, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-
-    for c in contours:
-        x, y, w, h = cv.boundingRect(c)
-        y -= 5  # 往上挪一点
-        h += 7
-        area = w * h
-
-        if moneyAreaLimit[0] < area < moneyAreaLimit[1]:
-            x0, x1 = x, x+w
-            fonts = []
-            fontMorph = cv.morphologyEx(thre, cv.MORPH_ERODE, np.ones((2,2),np.uint8))
-            fontImg = fontMorph[y:y + h, x0:x1]
-
-            cv.imshow('morph', fontImg)
-            while x1 > x0:
-                minArea = area  # 取最小差值的数
-                minNum = None
-                fontArea = 0#np.unique(fontImg, return_counts=True)[1][1]  # 白色像素数量
-                for i in np.matrix.tolist(fontImg):
-                    for j in i:
-                        if j == 255:
-                            fontArea += 1
-                print(fontArea)#np.unique(fontImg, return_counts=True))
-                img[y:y+h, x1-100-moneyFontWidth:x1] = (255, 255, 255)
-                cv.imshow('img', img)
-
-                for i in range(len(moneyFontArea)):
-                    duce = abs(fontArea - moneyFontArea[i])
-                    if duce < minArea:
-                        minArea = duce
-                        minNum = i
-                fonts.append(minNum)
-                x1 -= moneyFontWidth
-                print(minNum, fontArea)
-
-
-            if not len(fonts):
-                print('fonts is []!')
-                return 0
-
-            for i in range(len(fonts)):
-                money += fonts[i] * (10**i)
-            print(f'money:{money}')
-
-            return money
-
-            # if i is not 3:
-            #     i += 1
-            #     continue
-            cv.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv.putText(img, str(area), (x - int(w / 2), y + 20*int(h / 2)), cv.FONT_HERSHEY_PLAIN,
-                       fontScale=1, color=(0, 255, 0), thickness=2)
-            cv.imshow('img', img)
-            # return 0
-    cv.imshow('img', img)
-
-
 
 def getItems(img):
     gold_S, gold_M, gold_L = getGold(img)
@@ -444,41 +389,197 @@ def getItems(img):
             'bone_S': bone_S, 'bone_L': bone_L,
             'stone_S': stone_S, 'stone_L': stone_L,
             'pack': pack, 'bucket': bucket, 'diamond': diamond,
-            'pig': pig, 'diamondPig': diamondPig
-            }
+            'pig': pig, 'diamondPig': diamondPig}
 
 
+def getNumber(img, numClass):
+    """
+    模板匹配数字
+    :param img: 图片
+    :param numClass: 类别选择，如CLASS_MONEY
+    :return:
+    """
+    global tempThre, templateDir, templateThre, xxxx
+    global CLASS_MONEY, CLASS_TARGET, CLASS_TIME, CLASS_LEVEL
+
+    DEBUG = 0  # 是否框选(DEBUG)
+    if DEBUG:
+        copy = img.copy()
+
+    assert CLASS_MONEY <= numClass <= CLASS_LEVEL, 'Invalid numClass!'
+
+    # ROI - 减少计算量
+    if not DEBUG:
+        ROI_x, ROI_y, ROI_w, ROI_h = templateROI[numClass]
+        img = img[ROI_y:ROI_y+ROI_h, ROI_x:ROI_x+ROI_w]
+    else:
+        ROI_x, ROI_y = 0, 0
+
+    # 录入数字模板
+    tempDir = templateDir[numClass]  # 数字模板目录
+    scoreTemplate = []
+    for i in range(0, 10):
+        temp = cv.imread(tempDir + str(i) + '.jpg')
+        assert not temp is None, "No image template {}".format(tempDir + str(i) + '.jpg')
+        scoreTemplate.append(temp)
+
+    # 模板匹配
+    infos = []
+    shapeInfo = {'x': img.shape[1], 'y': img.shape[0], 'w': 0, 'h': 0}
+    for num in range(0, 10):
+        ROI_h, ROI_w = scoreTemplate[num].shape[:2]
+        output_temp = cv.matchTemplate(img, scoreTemplate[num], method=cv.TM_CCOEFF_NORMED)
+        locates = np.where(output_temp >= templateThre[numClass])
+        locates = zip(*locates[::-1])
+        for i in locates:
+            infos.append((i[0], i[1], num))  # (x轴，y轴，数值)
+            shapeInfo['w'] += ROI_w
+            if shapeInfo['x'] > i[0]:
+                shapeInfo['x'] = i[0]
+            if shapeInfo['y'] > i[1]:
+                shapeInfo['y'] = i[1]
+            if shapeInfo['h'] < ROI_h:
+                shapeInfo['h'] = ROI_h
+            if DEBUG:
+                cv.rectangle(copy, templateROI[numClass][:2],
+                             (templateROI[numClass][0] + templateROI[numClass][2],
+                              templateROI[numClass][1] + templateROI[numClass][3]), (0, 255, 0))
+                cv.rectangle(copy, i, (i[0] + ROI_w, i[1] + ROI_h), (0, 0, 255))
+                cv.putText(copy, str(num), (i[0], i[1] + 2*ROI_h), cv.FONT_HERSHEY_SIMPLEX,
+                           fontScale=0.5, color=(0, 0, 255), thickness=1)
+    if DEBUG:
+        cv.imshow('debug', copy)
+        print(infos)
+    # 数字解析
+    for i in range(len(infos)):  # 冒泡排序
+        minNum = i
+        for j in range(i + 1, len(infos)):
+            if infos[j][0] < infos[minNum][0]:
+                minNum = j
+        else:
+            infos[i], infos[minNum] = infos[minNum], infos[i]
+    value = 0
+    for i in infos:
+        value = value * 10 + i[2]
+
+    return value, (shapeInfo['x'] + ROI_x, shapeInfo['y'] + ROI_y, shapeInfo['w'], shapeInfo['h'])
+
+
+def drawNumbers(img):
+    """
+    画出所有的数字
+    :param img:要画的图像
+    :return: output - 画之后的图像
+    """
+    for i in range(CLASS_MONEY, CLASS_LEVEL+1):
+        info = getNumber(img, i)
+        # print(info)
+        x, y, w, h = info[1]
+        cv.rectangle(img, (x,y), (x+w, y+h), color=(0, 0, 255), thickness=1)
+        cv.putText(img, str(info[0]), (x, y-2), cv.FONT_HERSHEY_SIMPLEX,
+                   fontScale=0.5, color=(0, 0, 255), thickness=2)
+
+    return img
+
+
+def getHookAngel(raw):
+    """
+    获取钩子角度
+    :param img:
+    :return: 钩子角度
+    """
+    assert (raw.shape == (600, 800, 3)), "[error] resolution should be 800x600!"
+    DEBUG = 0   # 调试模式
+
+    hookPoint = Locate.ORGIN  # 出钩点
+    HOOKAREA = Locate.HOOKAREA  # 钩子区域(x1, y1), (x2, y2)
+    img = raw[HOOKAREA[0][1]:HOOKAREA[1][1], HOOKAREA[0][0]:HOOKAREA[1][0], :]  # 截取部分
+    imgHSV = cv.cvtColor(img, cv.COLOR_BGR2HSV)     # HSV色彩
+    thre = cv.inRange(imgHSV, (0, 0, 120), (10, 10, 155))
+
+    # 形态学运算
+    morph = thre
+    kernel = np.ones((5, 5), dtype=np.uint8)
+    morph = cv.dilate(morph, kernel)
+
+    # kernel = np.ones((3, 3), dtype=np.uint8)
+    # morph = cv.morphologyEx(morph, cv.MORPH_CLOSE, kernel)
+    # kernel = np.ones((5, 5), dtype=np.uint8)
+    # morph = cv.morphologyEx(morph, cv.MORPH_OPEN, kernel)
+    # kernel = np.ones((17, 17), dtype=np.uint8)
+    # morph = cv.morphologyEx(morph, cv.MORPH_CLOSE, kernel)
+
+    # 边缘检测
+    contours, hier = cv.findContours(morph, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    maxArea = None  # 取最大面积的区域
+    for c in contours:
+        # 匹配最小垂直矩形
+        if maxArea is None:  # 初值
+            maxArea = c
+            continue
+        w0, h0 = cv.boundingRect(maxArea)[2:4]
+        x, y, w, h = cv.boundingRect(c)
+        if w0 * h0 < w * h:
+            maxArea = c
+    if maxArea is None:  # 无轮廓
+        return None
+    # x, y, w, h = cv.boundingRect(maxArea)               # 转换竖直矩形参数
+    # cv.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0))  # 画钩子竖直矩形
+    rect = cv.minAreaRect(maxArea)  # 拟合最小矩形
+    if rect[1][0] > rect[1][1]:  # 角度计算
+        angel = rect[2] - 90
+    else:
+        angel = rect[2]
+    angel = angel + 180  # 角度反转
+
+    if DEBUG:
+        box = np.int0(cv.boxPoints(rect))  # 计算最小矩形离散点
+        cv.drawContours(img, [box], 0, (0, 255, 0), 1)  # 画最小矩形
+
+        cv.line(img, (hookPoint[0] - HOOKAREA[0][0], hookPoint[1] - HOOKAREA[0][1]), (int(rect[0][0]), int(rect[0][1])),
+                (0, 0, 255), thickness=2)
+        # 拼接回原图像
+        raw[HOOKAREA[0][1]:HOOKAREA[1][1], HOOKAREA[0][0]:HOOKAREA[1][0], :] = img
+        cv.imshow('img', raw)
+        cv.imshow('hookArea', img)
+        cv.imshow('thre', thre)
+        cv.imshow('morph', morph)
+    return -angel   # 返回极坐标角度
 
 
 if __name__ == '__main__':
-    # import GetImg
-    # import win32gui, win32con
-    # hwnd = GetImg.get_window("game.swf")
-    # win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 800, 600, win32con.SHOW_ICONWINDOW)
-    # while 1:
-    #     img = GetImg.get_img(hwnd)
-    #     # img = cv.imread('../dataset/84.jpg')
-    #     img = cv.resize(img, (800, 600))
-    #     print(img.shape)
-    #     Items = getItems(img)
-    #     for i in gameItems:
-    #         num = 0
-    #         if Items[i]:
-    #             for x, y, w, h in Items[i]:
-    #                 cv.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-    #                 cv.putText(img, i+"-"+str(num), (x - int(w / 2), y - int(h / 2)), cv.FONT_HERSHEY_SIMPLEX,
-    #                            fontScale=0.5, color=(0, 255, 0), thickness=2)
-    #                 num += 1
-    #     cv.imshow('demo', img)
-    #
-    #     key = cv.waitKey(50)
-    #     if key == 27:  # Esc退出
-    #         cv.destroyAllWindows()
-    #         break
+    import GetImg
+    import win32gui, win32con
+    hwnd = GetImg.get_window_view("game.swf")
+    win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 800, 600, win32con.SHOW_ICONWINDOW)
+    while 1:
+        # 获取物体
+        img = GetImg.get_img(hwnd)
+        # img = cv.imread('../dataset/84.jpg')
+        img = cv.resize(img, (800, 600))
+        Items = getItems(img)
+        for i in gameItems:
+            num = 0
+            if Items[i]:
+                for x, y, w, h in Items[i]:
+                    cv.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    cv.putText(img, i+"-"+str(num), (x - int(w / 2), y - int(h / 2)), cv.FONT_HERSHEY_SIMPLEX,
+                               fontScale=0.5, color=(0, 255, 0), thickness=2)
+                    num += 1
 
-    img = cv.imread('../dataset/'+tmp)
-    img = cv.resize(img, (800, 600))
-    cv.imshow('img', img)
+        # 获取数字
+        img = drawNumbers(img)
+
+        cv.imshow('demo', img)
+
+        key = cv.waitKey(50)
+        if key == 27:  # Esc退出
+            cv.destroyAllWindows()
+            break
+
+    # img = cv.imread('../dataset/85.jpg')
+    # img = cv.resize(img, (800, 600))
+    # cv.imshow('img', img)
     # getGold(img)
     # getStone(img)
     # getPig(img)
@@ -486,6 +587,6 @@ if __name__ == '__main__':
     # getPack(img)
     # getBucket(img)
     # getBone(img)
-    getMoney(img)
-    cv.waitKey(0)
+    # print(getNumber(img, numClass=CLASS_TIME))
+    # cv.waitKey(0)
 

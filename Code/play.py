@@ -1,83 +1,124 @@
+"""
+该文件负责游戏游玩相关操作，调用object——detection和GetImg文件
+"""
 import cv2 as cv
-import numpy as np
-from math import *
-from . import GetImg
-from . import object_detection
+import GetImg
+import object_detection
+import threading
+import time
+import win32api, win32con, win32gui
 
-def drawAxis(img, p_, q_, colour, scale):
-    p = list(p_)
-    q = list(q_)
-
-    angle = atan2(p[1] - q[1], p[0] - q[0])  # angle in radians
-    hypotenuse = sqrt((p[1] - q[1]) * (p[1] - q[1]) + (p[0] - q[0]) * (p[0] - q[0]))
-    # Here we lengthen the arrow by a factor of scale
-    q[0] = p[0] - scale * hypotenuse * cos(angle)
-    q[1] = p[1] - scale * hypotenuse * sin(angle)
-    cv.line(img, (int(p[0]), int(p[1])), (int(q[0]), int(q[1])), colour, 1, cv.LINE_AA)
-    # create the arrow hooks
-    p[0] = q[0] + 9 * cos(angle + pi / 4)
-    p[1] = q[1] + 9 * sin(angle + pi / 4)
-    cv.line(img, (int(p[0]), int(p[1])), (int(q[0]), int(q[1])), colour, 1, cv.LINE_AA)
-    p[0] = q[0] + 9 * cos(angle - pi / 4)
-    p[1] = q[1] + 9 * sin(angle - pi / 4)
-    cv.line(img, (int(p[0]), int(p[1])), (int(q[0]), int(q[1])), colour, 1, cv.LINE_AA)
-
-def getOrientation(pts, img):
-    sz = len(pts)
-    data_pts = np.empty((sz, 2), dtype=np.float64)
-    for i in range(data_pts.shape[0]):
-        data_pts[i, 0] = pts[i, 0, 0]
-        data_pts[i, 1] = pts[i, 0, 1]
-    # Perform PCA analysis
-    mean = np.empty((0))
-    mean, eigenvectors, eigenvalues = cv.PCACompute2(data_pts, mean)
-    # mean, eigenvectors, eigenvalues = cv.PCACompute(data_pts, mean, 2) #image, mean=None, maxComponents=10
-    # Store the center of the object
-    cntr = (int(mean[0, 0]), int(mean[0, 1]))
-
-    cv.circle(img, cntr, 3, (255, 0, 255), 2)  # 在PCA中心位置画一个圆圈
-    p1 = (
-    cntr[0] + 0.02 * eigenvectors[0, 0] * eigenvalues[0, 0], cntr[1] + 0.02 * eigenvectors[0, 1] * eigenvalues[0, 0])
-    p2 = (
-    cntr[0] - 0.02 * eigenvectors[1, 0] * eigenvalues[1, 0], cntr[1] - 0.02 * eigenvectors[1, 1] * eigenvalues[1, 0])
-    drawAxis(img, cntr, p1, (0, 255, 0), 1)  # 绿色，较长轴
-    drawAxis(img, cntr, p2, (255, 255, 0), 1)  # 黄色
-    angle = atan2(eigenvectors[0, 1], eigenvectors[0, 0])  # orientation in radians #PCA第一维度的角度
-    cv.imshow('Result', img)
-    return angle
+DEBUG = 1   # 调试模式
 
 
-# 钩子
-hook = cv.imread('..\\img\\Hook.jpg')
-cv.imshow("Hook", hook)
-
-hook_gray = cv.cvtColor(hook, cv.COLOR_BGR2GRAY)
-ret, hook_thre = cv.threshold(hook_gray, 200, 255, cv.THRESH_BINARY)
+hookAllowErr = 5    # 自动钩子的误差允许值，角度到达允许值时自动出钩
 
 
-# 寻找Hook轮廓
-hook_contour = cv.findContours(hook_thre, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)[0]
-for i in hook_contour:
-    area = cv.contourArea(i)
-    if 500 < area < (19040-500):  # 去除面积过大过小
-        cv.drawContours(hook, i, -1, (255, 0, 0), 2)
-        hook_contour = i
-cv.imshow("Hook", hook)
+class GamePlay:
+    """
+    游戏游玩的类
+    """
+    winHwnd = None  # 游戏窗口句柄
+    ctrHwnd = None  # 操控窗口句柄
+    winWait = 0     # 每一帧之间的等待时间(s)
 
-# 图片寻找角度
-img = cv.imread('..\\testImg\\0.jpg')
-img = cv.resize(img, (640, 480))
-cv.imshow("raw", img)
+    sta_thread = None # 状态更新线程
 
-GetImg.getItems(img)
+    class Hook:
+        angel_last = None      # 钩子上一个角度
+        angel = None           # 钩子当前角度
+        clockwise = True    # 是否顺时针
+
+    def __init__(self, windowsName, frequency):
+        """
+        :param windowsName: 游戏窗口名称
+        :param frequency: 更新频率
+        """
+        self.winHwnd = GetImg.get_window_view(windowsName)
+        self.ctrHwnd = GetImg.get_window_ctr(self.winHwnd)
+        if frequency:
+            self.winWait = int(1 / frequency)
+        else:
+            self.winWait = 0
+
+        # 创建状态更新线程
+        self.sta_thread = threading.Thread(target=self.task_state, name="state refresh")
+        self.sta_thread.start()
+
+    def task_state(self):
+        """
+        状态更新任务
+        """
+        img = GetImg.get_img(self.winHwnd)
+        img = cv.resize(img, (800, 600))
+
+        while 1:
+            img = GetImg.get_img(self.winHwnd)
+            img = cv.resize(img, (800, 600))
+
+            # 钩子状态更新（角度发生变化时）
+            newState = object_detection.getHookAngel(img)
+            if newState is not None:
+                if self.Hook.angel is None:     # 初状态时初始化
+                    self.Hook.angel = newState
+                elif self.Hook.angel != newState:
+                    self.Hook.angel_last = self.Hook.angel
+                    self.Hook.angel = newState
+                    # 顺/逆时针判断
+                    if self.Hook.angel_last < self.Hook.angel:
+                        self.Hook.clockwise = False
+                    else:
+                        self.Hook.clockwise = True
+
+            time.sleep(self.winWait)
+
+    def put_explosive(self):
+        """
+        丢炸药
+        """
+        win32api.PostMessage(self.ctrHwnd, win32con.WM_KEYDOWN, win32con.VK_UP, 0)
+        win32api.PostMessage(self.ctrHwnd, win32con.WM_KEYUP, win32con.VK_UP, 0)
+
+    def put_hook(self):
+        """
+        出钩
+        """
+        win32api.PostMessage(self.ctrHwnd, win32con.WM_KEYDOWN, win32con.VK_DOWN, 0)
+        win32api.PostMessage(self.ctrHwnd, win32con.WM_KEYUP, win32con.VK_DOWN, 0)
+
+    def put_hook_auto(self, angel):
+        """
+        自动出钩
+        :param angel: 出钩的角度
+        :return True - 失败, False - 成功
+        """
+        start_time = time.time()  # 获取当前时间，用于超时判断
+        # 等待数据类型正确
+        while self.Hook.angel is None:
+            time.sleep(self.winWait)
+            # 超时判断
+            if (time.time() - start_time) > 10:
+                if DEBUG:
+                    print("[DEBUG/GamePlay]\tAuto put hook type err!")
+                return True
+
+        while abs(self.Hook.angel - angel) > hookAllowErr:
+            time.sleep(self.winWait)
+            # 超时判断
+            if (time.time() - start_time) > 10:
+                if DEBUG:
+                    print("[DEBUG/GamePlay]\tAuto put hook timeout!")
+                return True
+
+        self.put_hook()
+        if DEBUG:
+            print("[DEBUG/GamePlay]\tAuto put hook succeed!")
+        return False
 
 
-# # 标注
-# for c, j in enumerate(hook_contour):
-#     angel = getOrientation(hook_contour, img)
-#     print(angel)
+if __name__ == "__main__":
+    player = GamePlay("game.swf", 5)
+    player.put_hook_auto(-90)
 
-
-
-cv.waitKey(0)
-cv.destroyAllWindows()
+    cv.waitKey(0)
+    cv.destroyAllWindows()
