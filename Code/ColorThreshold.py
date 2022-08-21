@@ -38,8 +38,15 @@ def __refresh(x):
 def __main():
     global __img, __camera
     print("启动颜色阈值调试程序！")
-    print("使用内置图片！")
-    src = cv2.imread('../dataset/85.jpg')
+    if 0:
+        print("使用内置图片！")
+        src = cv2.imread('../dataset/85.jpg')
+    else:
+        import GetImg, win32gui, win32con
+        print("使用游戏窗口截图")
+        hwnd = GetImg.get_window_view("Adobe Flash")
+        win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 800, 600, win32con.SHOW_ICONWINDOW)
+        src = GetImg.get_img(hwnd)
 
     if src is None:  # 判断图像存在性
         print("图像不存在！")

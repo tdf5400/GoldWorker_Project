@@ -30,17 +30,20 @@ def get_window_view(windowName):
 def get_window_ctr(parentHwnd):
     """
     寻找供操控的子窗口
-    :param parentHwnd:父窗口的句柄
+    :param parentHwnd:父窗口的句柄，若无子句柄，则返回父窗口句柄
     :return: None-查找失败, 其他-操控的子窗口句柄
     """
     hwnd = win32gui.FindWindowEx(parentHwnd, 0, None, '')
     # 获取所有子窗口
     hwndChildList = []
-    win32gui.EnumChildWindows(hwnd, lambda hwnd, param: param.append(hwnd), hwndChildList)
-    for i in hwndChildList:
-        if 'FlashPlayer' in win32gui.GetClassName(i):
-            return i
-    return None
+
+    if len(hwndChildList):
+        win32gui.EnumChildWindows(hwnd, lambda hwnd, param: param.append(hwnd), hwndChildList)
+        for i in hwndChildList:
+            if 'FlashPlayer' in win32gui.GetClassName(i):
+                return i
+
+    return parentHwnd
 
 
 def get_img(hwnd):
@@ -65,7 +68,8 @@ def get_img(hwnd):
 
 if __name__ == "__main__":
     if 1:
-        hwnd = get_window_view("game.swf")
+        # hwnd = get_window_view("game.swf")
+        hwnd = get_window_view("Adobe Flash")
         # 更改窗口大小
         win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 800, 600, win32con.SHOW_ICONWINDOW)
 
