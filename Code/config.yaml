@@ -1,0 +1,39 @@
+path_root: '..' # 根目录与代码的相对路径
+path_flash_engine: 'flash' # flash播放器路径
+path_flash_game: 'flash'   # flash游戏路径
+
+name_flash: 'Adobe Flash Player' # 游戏窗口名称
+
+ROI: # 采样区域
+  image: [[6,0], [778, 600]] # 取得800x600图片后，要裁剪的图片区域[p1, p2]
+  number: [[0, 0, 259, 79], # x, y, w, h
+           [651, 12, 132, 67]] # 钱，目标，剩余时间，关卡号
+  hook: [353, 46, 83, 45] # x, y, w, h
+
+winSize: [800, 600] # 窗口尺寸（800x600）
+
+sample: # 采样参数
+  freq: # 采样频率
+    default: 20 # 模板匹配等
+    ocr: 4      # ocr数字识别
+    ctrl: 10    # 控制器
+
+  UI: # 界面识别
+    status: ['title', 'end', 'shop', 'play', 'other'] # 主界面，结算，商店，挖矿
+    locate: [397, 10] # UI判定的采样点
+    hue: [[0,0,0], [29,255,76], [11,165,131], [114,189,155]] 
+
+  number: # 数字识别
+    class: ['money', 'target', 'time', 'level'] # 钱，目标，剩余时间，关卡号
+    thres: [0.68, 0.7, 0.73, 0.75] # 数字模板阈值
+  
+  hook: # 钩子角度识别
+    background: 'img/hook_background.jpg' # 背景图片
+    centerLoc: [385, 66] # 钩子中心点
+
+
+draw: # 绘制选项
+  number: # 数字绘制的位置
+    [[0, 14], [0, 28], [0, 42], [0, 56]]
+  hook:   # 钩子信息
+    [0, 70]

@@ -4,6 +4,7 @@ ROI获取
 """
 import cv2 as cv
 import numpy as np
+import GetImg
 
 # 全局变量
 __img = 0
@@ -37,20 +38,18 @@ def __main():
     print("启动颜色阈值调试程序！")
     if 0:
         print("使用内置图片！")
-        src = cv2.imread('../pic1.jpg')
+        img = cv2.imread('../pic1.jpg')
     else:
         import GetImg, object_detection, win32gui, win32con
         print("使用游戏窗口截图")
-        hwnd = GetImg.get_window_view("Adobe Flash")
-        win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 800, 600, win32con.SHOW_ICONWINDOW)
-        src = GetImg.get_img(hwnd)
-        picRoi = object_detection.picRoi  # 获取有效图像
-        img = src[picRoi[1]:picRoi[3], picRoi[0]:picRoi[2]]
+        
+        win = GetImg.Window()
+        img = win.get_img()
 
-    if src is None:  # 判断图像存在性
+    if img is None:  # 判断图像存在性
         print("图像不存在！")
     else:
-        __img = cv.resize(src, (800, 600))  # 分辨率重定义
+        __img = img
         __refresh(None)
 
 
@@ -66,15 +65,18 @@ if __name__ == "__main__":
 
     __main()
 
-
+    win = GetImg.Window()
     while(True):
+        __img = win.get_img()
+        __refresh(None)
+        
         # Esc退出
-        keyAction = cv.waitKey(1)  # 延时1ms
+        keyAction = cv.waitKey(50)  # 延时1ms
         if keyAction == 27:  # Esc
             cv.destroyAllWindows()
             break
         elif keyAction == ord('s'):
-            cv.imwrite(picSavePath + f'num{picNum}.jpg', __output)
-            print(f'Pic save to {picSavePath}num{picNum}.jpg with {np.shape(__output)[:2]}')
+            cv.imwrite(picSavePath + f'pic{picNum}.jpg', __output)
+            print(f'Pic save to {picSavePath}pic{picNum}.jpg with {np.shape(__output)[:2]}')
             picNum += 1
             continue

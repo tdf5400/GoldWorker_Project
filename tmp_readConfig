@@ -1,0 +1,11 @@
+import yaml
+
+if __name__ == '__main__':
+    # 读取配置文件
+    configPath = './Code/config.yaml'
+    config = yaml.safe_load_all(open(configPath, 'rb'))
+
+    print(list(config))
+
+
+    
